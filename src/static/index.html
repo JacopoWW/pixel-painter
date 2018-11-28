@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Pixel Painter</title>
+  <style>
+    .canvas {
+      width: -moz-max-content;
+      border: 2px solid;
+    }
+    .row {
+      display: flex;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border: 2px solid;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="canvas">
+      <div class="row" v-for="(row, y) in pixelData">
+        <span @click="drawDot(x, y, color)" class="dot" v-for="(dotColor, x) in row" :style="{background: dotColor}">
+        </span>
+      </div>
+    </div>
+    <label :style="{color: c}" v-for="c of commonColor">
+      <input type="radio" :value="c" v-model="color">{{c}}
+    </label>
+  </div>
+<script src="vue-2.5.17.js"></script>
+<script>
+  const app = new Vue({
+    el: '#app',
+    data() {
+      return {
+        pixelData: [],
+        commonColor: ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'black', 'white'],
+        color: 'red',
+      }
+    },
+    methods: {
+      drawDot(x, y, color) {
+        this.ws.send(JSON.stringify({
+          type: 'drawDot',
+          x, y, color,
+        }))
+      }
+    },
+    mounted() {
+      const ws = new WebSocket('ws://localhost:9095/pixel')
+      this.ws = ws;
+      ws.onmessage = ({ data }) => {
+        const state = JSON.parse(data)
+        // debugger
+        if (state.type === 'init') {
+          this.pixelData = state.pixelData
+        } else if (state.type === 'updateDot') {
+          Vue.set(this.pixelData[state.y], state.x, state.color)
+        }
+      }
+    },
+  })
+</script>
+</body>
+</html>
