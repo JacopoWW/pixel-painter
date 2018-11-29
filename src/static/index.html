@@ -10,24 +10,14 @@
       width: -moz-max-content;
       border: 2px solid;
     }
-    .row {
-      display: flex;
-    }
-    .dot {
-      width: 10px;
-      height: 10px;
-      border: 2px solid;
-    }
   </style>
 </head>
 <body>
   <div id="app">
     <div class="canvas">
-      <div class="row" v-for="(row, y) in pixelData">
-        <span @click="drawDot(x, y, color)" class="dot" v-for="(dotColor, x) in row" :style="{background: dotColor}">
-        </span>
-      </div>
+      <canvas @click="drawDot" ref="canvas" :width="width" :height="height"></canvas>
     </div>
+    <input type="color" v-model="color">
     <label :style="{color: c}" v-for="c of commonColor">
       <input type="radio" :value="c" v-model="color">{{c}}
     </label>
@@ -41,26 +31,48 @@
         pixelData: [],
         commonColor: ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'black', 'white'],
         color: 'red',
+        width: 0,
+        height: 0,
       }
     },
     methods: {
-      drawDot(x, y, color) {
+      drawDot(e) {
+        console.log(e);
         this.ws.send(JSON.stringify({
           type: 'drawDot',
-          x, y, color,
+          x: e.layerX,
+          y: e.layerY,
+          color: this.color,
         }))
       }
     },
     mounted() {
       const ws = new WebSocket('ws://localhost:9095/pixel')
+      console.log('发送')
       this.ws = ws;
+
+      const canvas = this.$refs.canvas
+      const ctx = canvas.getContext('2d')
       ws.onmessage = ({ data }) => {
         const state = JSON.parse(data)
         // debugger
         if (state.type === 'init') {
-          this.pixelData = state.pixelData
+          // this.pixelData = state.pixelData
+          this.width = state.pixelData[0].length
+          this.height = state.pixelData.length
+          console.log('初始化')
+          Vue.nextTick(() => {
+            state.pixelData.forEach((row, y) => {
+              row.forEach((color, x) => {
+                ctx.fillStyle = color
+                ctx.fillRect(x, y, 1, 1)
+              })
+            })
+          })
         } else if (state.type === 'updateDot') {
-          Vue.set(this.pixelData[state.y], state.x, state.color)
+          // Vue.set(this.pixelData[state.y], state.x, state.color)
+          ctx.fillStyle = state.color
+          ctx.fillRect(state.x, state.y, 1, 1)
         }
       }
     },
