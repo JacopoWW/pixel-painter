@@ -15,11 +15,12 @@
 <body>
   <div id="app">
     <div class="canvas">
-      <canvas @click="drawDot" ref="canvas" :width="width" :height="height"></canvas>
+      <canvas @click="handleCanvasClick" ref="canvas" :width="width" :height="height"></canvas>
     </div>
+    <button @click="isPickingColor = true">{{ isPickingColor ? '正在取色' : '取色' }}</button>
     <input type="color" v-model="color">
-    <label :style="{color: c}" v-for="c of commonColor">
-      <input type="radio" :value="c" v-model="color">{{c}}
+    <label :style="{color: c.name}" v-for="c of commonColor">
+      <input type="radio" :value="c.value" v-model="color">{{c.name}}
     </label>
   </div>
 <script src="vue-2.5.17.js"></script>
@@ -29,13 +30,58 @@
     data() {
       return {
         pixelData: [],
-        commonColor: ['red', 'orange', 'yellow', 'green', 'aqua', 'blue', 'purple', 'black', 'white'],
+        commonColor: [{
+          name: 'red',
+          value: '#ff0000',
+        }, {
+          name: 'orange',
+          value: '',
+        }, {
+          name: 'yellow',
+          value: '#ffff00',
+        }, {
+          name: 'green',
+          value: '#008000',
+        }, {
+          name: 'aqua',
+          value: '#008000',
+        }, { 
+          name: 'blue',
+          value: '#0000ff', 
+        }, {
+          name: 'purple',
+          value: '', 
+        }, {
+          name: 'black',
+          value: '#000000', 
+        }, {
+          name: 'white',
+          value: '#ffffff',
+        }],
         color: 'red',
         width: 0,
         height: 0,
+        isPickingColor: false,
       }
     },
     methods: {
+      handleCanvasClick(e) {
+        if (this.isPickingColor) {
+          this.pickColor(e)
+        } else {
+          this.drawDot(e)
+        }
+      },
+      pickColor(e) {
+        console.log('进入到pickColor')
+        const x = e.layerX
+        const y = e.layerY
+        const p = this.ctx.getImageData(x,y,1,1).data
+        const hexColor = this.rgba2hex(p)
+        console.log(p, hexColor)
+        this.color = hexColor
+        this.isPickingColor = false
+      },
       drawDot(e) {
         console.log(e);
         this.ws.send(JSON.stringify({
@@ -44,6 +90,11 @@
           y: e.layerY,
           color: this.color,
         }))
+      },
+      rgba2hex(dot) {
+        dot = Array.from(dot)
+          .map(it => it.toString(16).padStart(2, '0'))
+        return `#${dot[0]}${dot[1]}${dot[2]}`
       }
     },
     mounted() {
@@ -53,6 +104,7 @@
 
       const canvas = this.$refs.canvas
       const ctx = canvas.getContext('2d')
+      this.ctx = ctx
       ws.onmessage = ({ data }) => {
         const state = JSON.parse(data)
         // debugger
